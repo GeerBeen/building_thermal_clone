@@ -1,0 +1,2 @@
+class RoomOverlapError(Exception):
+    pass

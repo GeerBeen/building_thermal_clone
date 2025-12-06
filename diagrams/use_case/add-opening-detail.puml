@@ -1,0 +1,32 @@
+@startuml AddOpening
+left to right direction
+skinparam monochrome false
+skinparam shadowing false
+
+actor "Користувач" as user
+
+rectangle "3.6 Додати вікно/двері на стіну" {
+
+  usecase "3.6.1 Вибрати стіну для додавання отвору" as UC361
+  usecase "3.6.2 Вибрати тип отвору" as UC362
+  usecase "3.6.3 Задати геометрію отвору" as UC363
+  usecase "3.6.5 Вибрати матеріал" as UC365
+  usecase "3.6.6 Виправити невірні значення" as UC366
+  usecase "3.6.7 Додати отвір до стіни" as UC367
+  usecase "3.6.8 Оновити план та теплову модель" as UC368
+}
+
+user --> UC361
+user --> UC362
+user --> UC363
+user --> UC365
+
+UC361 --> UC367 : <<include>>
+UC362 --> UC367 : <<include>>
+UC363 --> UC367 : <<include>>
+UC365 --> UC367 : <<include>>
+
+UC363 ..> UC366 : <<extend>> 
+
+UC367 --> UC368 : <<include>>
+@enduml

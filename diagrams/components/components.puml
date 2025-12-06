@@ -1,0 +1,53 @@
+@startuml Components
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam nodesep 70
+
+
+package "FrontEnd"  #LightBlue {
+  component [Streamlit App\n(main.py)] as Frontend
+}
+
+package "BackEnd"  #LightGreen {
+  
+  package "Модель будівлі" {
+    component [Building] as Building
+    component [Room] as Room
+    component [Wall] as Wall
+    component [Opening] as Opening
+    component [Material] as Material
+    component [OpeningType] as OpeningType
+  }
+  
+  package "Симуляція та середовище" {
+    component [Environment] as Environment
+    component [Simulation] as Simulation
+    component [SimulationResult] as SimulationResult
+  }
+  
+  package "Проєкт" {
+    component [Project] as Project
+  }
+}
+
+
+Frontend --> Building : викликає методи
+Frontend --> Simulation : запускає розрахунок
+Frontend --> Project : створює/завантажує проєкт
+
+Building --> Room : містить
+Building --> Wall : містить
+Wall --> Opening : містить
+Wall --> Material : base_material
+Opening --> Material : material
+Opening --> OpeningType : type
+
+Simulation --> Building : читає геометрію
+Simulation --> Environment : зовнішні умови
+Simulation --> SimulationResult : генерує
+
+Project --> Building : містить
+Project --> Simulation : містить
+
+
+@enduml

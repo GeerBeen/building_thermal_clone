@@ -1,0 +1,22 @@
+@startuml Simulation
+left to right direction
+actor "Користувач" as user
+
+rectangle "5. Виконати тепловий розрахунок" {
+  usecase "5.1 Задати зовнішні умови" as UC51
+  usecase "5.2 Задати внутрішні умови" as UC52
+  usecase "5.3 Запустити статичний розрахунок" as UC53
+  usecase "5.4 Запустити динамічний розрахунок" as UC54
+  usecase "5.5 Переглянути теплову карту" as UC55
+  usecase "5.6 Переглянути анімацію зміни температури" as UC56
+}
+
+user --> UC51
+user --> UC52
+user --> UC53
+user --> UC54
+
+UC53 --> UC55 : <<include>>
+UC54 --> UC56 : <<include>>
+UC54 ..> UC55 : <<extend>> 
+@enduml

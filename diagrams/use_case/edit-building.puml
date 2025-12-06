@@ -1,0 +1,48 @@
+@startuml EditBuilding
+left to right direction
+actor "Користувач" as user
+
+rectangle "3. Редагувати план будівлі" {
+  usecase "3.1 Додати першу кімнату" as UC31
+  usecase "3.2 Додати кімнату до існуючої стіни" as UC32
+  usecase "3.3 Видалити кімнату" as UC33
+  usecase "3.4 Вибрати об'єкт на плані (стіна/кімната)" as UC34
+  usecase "3.5 Переглянути/змінити властивості вибраного об'єкта" as UC35
+  usecase "3.6 Додати вікно/двері на стіну" as UC36
+  usecase "3.7 Змінити матеріал стіни" as UC37
+  usecase "3.8 Перемістити/масштабувати план" as UC38
+  usecase "3.9 Редагувати вибраний об'єкт" as UC39
+
+  usecase "3.10 Змінити матеріал" as UC310
+  usecase "3.11 Змінити висоту" as UC311
+  usecase "3.12 Змінити ширину" as UC312
+
+}
+
+user --> UC31
+user --> UC32
+user --> UC33
+user --> UC34
+user --> UC35
+user --> UC36
+user --> UC37
+user --> UC38
+
+UC33 --> UC35 : <<include>>
+UC32 --> UC35 : <<include>>
+UC31 --> UC35 : <<include>>
+UC34 --> UC39 : <<include>>
+UC36 --> UC35 : <<include>>
+UC37 --> UC35 : <<include>>
+
+UC39 --> UC310 : <<extend>>
+UC39 --> UC311 : <<extend>>
+UC39 --> UC312 : <<extend>>
+
+
+note bottom of UC34
+  Користувач може вибрати об'єкт:
+   кліком на 2D-план
+   з сайдбару/таблиці
+end note
+@enduml

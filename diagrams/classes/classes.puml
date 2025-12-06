@@ -1,0 +1,130 @@
+@startuml classes
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+
+  class Building {
+    +create_initial_room(...)
+    +add_room_to_wall(wall_id, depth, name)
+    +get_room_center(room_id): tuple
+    +get_building_plan(): Figure
+    +get_external_walls(): List[Wall]
+    +get_total_heat_loss(): float
+    +save_to_json(path)
+    +load_from_json(path)
+    -walls: dict[str, Wall]
+    -rooms: dict[str, Room]
+  }
+
+  class Room {
+    +name: str
+    +x: float
+    +y: float
+    +width: float
+    +length: float
+    +height: float
+    +wall_ids: list[str]
+    +id: str
+    +get_center(building): tuple[float, float]
+    +get_area(): float
+    +get_volume(): float
+    +get_walls(building): list[Wall]
+    +get_adjacent_rooms(building): list[Room]
+  }
+
+  class Wall {
+    +start_x: float
+    +start_y: float
+    +end_x: float
+    +end_y: float
+    +height: float
+    +base_material: Material
+    +openings: list[Opening]
+    +room_ids: list[str]
+    +id: str
+    +length(): float
+    +is_external(): bool
+    +total_U(): float
+    +net_area(): float
+    +add_opening(opening: Opening)
+    +remove_opening(opening_id: str)
+  }
+
+  class Opening {
+    +type: OpeningType
+    +width: float
+    +height: float
+    +material: Material
+    +sill_height: float = 0.9
+    +id: str
+    +area(): float
+  }
+
+  enum OpeningType {
+    WINDOW
+    DOOR
+    HOLE
+  }
+
+  class Material {
+    +name: str
+    +U: float
+    +density: float
+    +specific_heat: float
+    +color: str
+    +is_transparent: bool = false
+    +id: str
+  }
+
+  class Environment {
+    +outdoor_temperature: float
+    +wind_speed: float
+    +solar_radiation: float
+    +location: str
+    +set_weather_data(date, hour)
+  }
+
+  class Simulation {
+    +building: Building
+    +environment: Environment
+    +indoor_setpoint: float = 22.0
+    +run_static(): SimulationResult
+    +run_dynamic(hours: int): list[SimulationResult]
+    +get_heat_loss_by_wall(): dict[str, float]
+  }
+
+  class SimulationResult {
+    +timestamp: datetime
+    +room_temperatures: dict[str, float]
+    +total_heat_loss: float
+    +heat_loss_by_component: dict
+  }
+
+  class Project {
+    +name: str
+    +building: Building
+    +simulation: Simulation
+    +save(path: str)
+    +load(path: str): Project
+    +export_report_pdf()
+  }
+
+Building "1" --> "0.." Room : містить 
+Building "1" --> "0.." Wall : містить 
+
+Room "1" --> "4" Wall : має стіни 
+Wall "1" --> "0.." Opening : містить отвори 
+Wall --> Material : base_material
+Opening --> Material : material
+
+Building --> Environment : використовує
+Building --> Simulation : запускає
+
+Simulation --> SimulationResult : генерує 
+
+Project "1" --> "1" Building
+Project "1" --> "0..1" Simulation
+
+Opening --> OpeningType : type
+
+@enduml

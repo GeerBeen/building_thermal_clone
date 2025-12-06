@@ -10,7 +10,7 @@ def make_simulation():
     """
     Головний контролер сторінки симуляції.
     """
-    st.header("📈 Симуляція та Економіка")
+    st.header("Симуляція та Економіка")
 
     if "building" not in st.session_state or not st.session_state.building.rooms:
         st.warning("Спочатку створіть будівлю та кімнати!")
@@ -25,7 +25,7 @@ def make_simulation():
     st.divider()
 
     # 2. Запуск
-    if st.button("🚀 ЗАПУСТИТИ", type="primary", use_container_width=True):
+    if st.button("ЗАПУСТИТИ", type="primary", use_container_width=True):
         _run_simulation_process(building, params, profiles)
 
 
@@ -36,7 +36,7 @@ def make_simulation():
 def _render_simulation_params():
     """Відображає віджети для глобальних налаштувань (погода, тариф, час)."""
     with st.container(border=True):
-        st.subheader("🌍 Умови середовища")
+        st.subheader("Умови середовища")
         c1, c2, c3 = st.columns(3)
         with c1:
             t_min, t_max = st.slider(
@@ -65,7 +65,7 @@ def _render_simulation_params():
 
 def _render_room_settings(building):
     """Відображає налаштування HVAC для кожної кімнати."""
-    st.subheader("⚙️ Налаштування кімнат")
+    st.subheader(" Налаштування кімнат")
     profiles = {}
 
     for room_id, room in building.rooms.items():
@@ -80,7 +80,7 @@ def _get_profile_for_room(room, room_id):
     has_hvac = len(room.hvac_devices) > 0
 
     if not has_hvac:
-        st.caption("⚠️ У кімнаті немає пристроїв обігріву. Вона буде пасивною.")
+        st.caption("У кімнаті немає пристроїв обігріву. Вона буде пасивною.")
         return RoomControlProfile(mode=ControlMode.ALWAYS_OFF)
 
     c_mode = st.selectbox(
@@ -153,7 +153,7 @@ def _run_simulation_process(building, params, profiles):
         # 2. Оновлюємо бар
         progress_bar.progress((i + 1) * 10)
 
-    status_text.text("✅ Симуляцію завершено успішно!")
+    status_text.text("Симуляцію завершено успішно!")
 
     # === ВІДОБРАЖЕННЯ РЕЗУЛЬТАТІВ (Тільки один раз в кінці) ===
     _render_results(sim, building, params["tariff"])
@@ -170,7 +170,7 @@ def _render_results(sim, building, tariff):
     st.plotly_chart(sim.get_results_chart(), use_container_width=True)
 
     # 2. Економічний звіт
-    st.subheader("💰 Енерговитрати та Вартість")
+    st.subheader("Енерговитрати та Вартість")
 
     total_kwh_all = sum(sim.total_energy_kwh.values())
     total_cost = total_kwh_all * tariff

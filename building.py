@@ -110,7 +110,7 @@ class Building:
                 textfont=dict(size=14, color="black", weight="bold"),
                 # === ID Кімнати прив'язаний до тексту ===
                 customdata=[[room.id, "room"]],
-                hovertemplate=f"🏠 Кімната: {room.name}<extra></extra>",
+                hovertemplate=f"Кімната: {room.name}<extra></extra>",
                 showlegend=False
             ))
 
@@ -184,7 +184,7 @@ class Building:
                     mode="lines",
                     line=dict(color="rgba(0,0,0,0)", width=20),
                     customdata=[[wall.id, "wall"], [wall.id, "wall"]],  # Дублюємо для двох точок
-                    hovertemplate=f"🧱 Стіна: {getattr(wall.base_material, 'name', 'Стіна')}<extra></extra>",
+                    hovertemplate=f"Стіна: {getattr(wall.base_material, 'name', 'Стіна')}<extra></extra>",
                     showlegend=False
                 ))
 

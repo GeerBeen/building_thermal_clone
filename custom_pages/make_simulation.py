@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from simulation.controls import RoomControlProfile, ControlMode
 from simulation.thermal_simulation import ThermalSimulation
-
+import json
 
 # Припускаємо наявність класів Building, RoomControlProfile, ControlMode, ThermalSimulation
 
@@ -25,7 +25,7 @@ def make_simulation():
     st.divider()
 
     # 2. Запуск
-    if st.button("ЗАПУСТИТИ", type="primary", use_container_width=True):
+    if st.button("ЗАПУСТИТИ", type="primary", width='stretch'):
         _run_simulation_process(building, params, profiles)
 
 
@@ -167,7 +167,7 @@ def _render_results(sim, building, tariff):
     """Малює графіки та таблиці."""
 
     # 1. Графік температур
-    st.plotly_chart(sim.get_results_chart(), use_container_width=True)
+    st.plotly_chart(sim.get_results_chart(), width='stretch')
 
     # 2. Економічний звіт
     st.subheader("Енерговитрати та Вартість")
@@ -187,14 +187,16 @@ def _render_results(sim, building, tariff):
 
 
 def _render_energy_table(sim, building, tariff, total_kwh_all):
-    """Малює детальну таблицю по кімнатах."""
+    """Малює детальну таблицю по кімнатах та дозволяє скачати результати."""
+
+    # 1. Формуємо зведені дані (для таблиці)
     report_data = []
 
     for rid, kwh in sim.total_energy_kwh.items():
         cost = kwh * tariff
         room_name = building.rooms[rid].name
 
-        # Середня температура (захист від ділення на нуль, якщо масив порожній)
+        # Середня температура
         temps = sim.history_temps.get(rid, [])
         avg_temp = sum(temps) / len(temps) if temps else 0.0
 
@@ -209,17 +211,86 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
         st.info("Немає даних для звіту.")
         return
 
+    # Створюємо DataFrame для відображення
+    df_summary = pd.DataFrame(report_data)
+
     st.dataframe(
-        pd.DataFrame(report_data),
-        use_container_width=True,
+        df_summary,
+        width='stretch',
         column_config={
             "Споживання (кВт·год)": st.column_config.ProgressColumn(
                 "Споживання",
                 format="%.2f",
                 min_value=0,
-                max_value=max(total_kwh_all, 1.0)  # Захист, щоб max не був 0
+                max_value=max(total_kwh_all, 1.0)
             ),
             "Вартість (грн)": st.column_config.NumberColumn("Вартість", format="%.2f грн"),
             "Середня T (°C)": st.column_config.NumberColumn("Середня T", format="%.1f °C"),
         }
     )
+
+    # =========================================================
+    # 2. БЛОК ЕКСПОРТУ (CSV, JSON)
+    # =========================================================
+    st.divider()
+    st.subheader("Експорт результатів")
+
+    with st.container(border=True):
+        st.caption("Оберіть формат для завантаження даних:")
+
+        # А. Готуємо Детальний DataFrame (Часовий ряд)
+        # Створюємо словник: Час -> Вулиця -> Кімната 1 -> Кімната 2...
+        time_series_data = {
+            "Час (годин)": sim.history_time,
+            "Вулиця (°C)": sim.history_outdoor
+        }
+        for rid, temps in sim.history_temps.items():
+            r_name = building.rooms[rid].name
+            time_series_data[f"{r_name} (°C)"] = temps
+
+        df_detailed = pd.DataFrame(time_series_data)
+
+        # Б. Кнопки завантаження
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            # 1. CSV: Зведений звіт (Те, що в таблиці)
+            st.download_button(
+                label="Звіт (CSV)",
+                data=df_summary.to_csv(index=False).encode('utf-8'),
+                file_name="simulation_summary.csv",
+                mime="text/csv",
+                help="Завантажити таблицю витрат та середніх температур"
+            )
+
+        with col2:
+            # 2. CSV: Детальна динаміка (Для Excel)
+            st.download_button(
+                label="Динаміка (CSV)",
+                data=df_detailed.to_csv(index=False).encode('utf-8'),
+                file_name="simulation_dynamics.csv",
+                mime="text/csv",
+                help="Завантажити детальні зміни температури по хвилинах для Excel"
+            )
+
+        with col3:
+            # 3. JSON: Повний дамп (Звіт + Динаміка)
+            full_json_data = {
+                "summary": report_data,
+                "dynamics": time_series_data,
+                "parameters": {
+                    "t_min": sim.t_min_outdoor,
+                    "t_max": sim.t_max_outdoor,
+                    "tariff": tariff
+                }
+            }
+            # Конвертуємо в JSON рядок
+            json_str = json.dumps(full_json_data, indent=2, ensure_ascii=False)
+
+            st.download_button(
+                label="Все (JSON)",
+                data=json_str,
+                file_name="simulation_full.json",
+                mime="application/json",
+                help="Повний набір даних у форматі JSON"
+            )

@@ -96,7 +96,7 @@ def make_materials():
                 st.session_state.filter_search = ""
 
             # Кнопка тепер просто викликає функцію, а не містить логіку всередині if
-            st.button("Скинути фільтри", on_click=reset_filters_callback, use_container_width=True)
+            st.button("Скинути фільтри", on_click=reset_filters_callback, width='stretch')
 
     # 3. ЛОГІКА ФІЛЬТРАЦІЇ (Filtering Logic)
     df = df_original.copy()
@@ -126,7 +126,7 @@ def make_materials():
                 "Назва", "Рівень", "Товщина (мм)", "U-значення",
                 "Лямбда", "Щільність", "Теплоємність", "Колір"
             ]],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Назва": st.column_config.TextColumn("Матеріал", width="medium"),

@@ -31,7 +31,7 @@ def render_save_load_controls():
                         data=json_str,
                         file_name="house_project.json",
                         mime="application/json",
-                        use_container_width=True,
+                        width='stretch',
                         type="primary"
                     )
                 except Exception as e:
@@ -60,7 +60,7 @@ def render_save_load_controls():
                     st.button(
                         "Відкрити цей проєкт",
                         type="primary",
-                        use_container_width=True,
+                        width='stretch',
                         on_click=apply_load_callback,  # Викликати цю функцію
                         args=(loaded_building,)  # Передати цей аргумент у функцію
                     )

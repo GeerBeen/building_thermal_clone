@@ -103,7 +103,7 @@ def _render_plot(building):
         fig,
         on_select="rerun",
         selection_mode="points",
-        use_container_width=True,
+        width='stretch',
         key="room_selector"
     )
     return event
@@ -123,7 +123,7 @@ def _render_inspector_panel(building, event):
         st.info("Натисніть на кімнату на плані, щоб побачити деталі та список стін.")
 
         # Глобальні дії
-        if st.button("Видалити все", type="primary", use_container_width=True):
+        if st.button("Видалити все", type="primary", width='stretch'):
             st.session_state.building = Building()
             st.rerun()
 
@@ -217,7 +217,7 @@ def _render_room_details(building, room):
     # === БЛОК ВИДАЛЕННЯ ===
     st.divider()
 
-    if st.button("Видалити цю кімнату", key=f"del_btn_{room.id}", type="primary", use_container_width=True):
+    if st.button("Видалити цю кімнату", key=f"del_btn_{room.id}", type="primary", width='stretch'):
         try:
             building.delete_room(room.id)
             st.success(f"Кімнату '{room.name}' видалено!")

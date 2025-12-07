@@ -94,7 +94,7 @@ def make_openings():
     if not df.empty:
         st.dataframe(
             df[["Назва", "Категорія", "U-значення", "g-фактор", "Колір"]],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Назва": st.column_config.TextColumn("Назва", width="large"),

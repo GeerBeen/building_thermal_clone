@@ -44,14 +44,37 @@ class ThermalSimulation:
         self.t_max_outdoor = t_max
         self.internal_heat_gain = internal_gain
         self.control_profiles = profiles
+        self.total_energy_kwh = {rid: 0.0 for rid in self.building.rooms}  # Скидаємо лічильник
 
-        self.history_time = []
-        self.history_outdoor = []
+        # === ВИПРАВЛЕННЯ ТУТ ===
+        # 1. Ініціалізуємо час з нульовою точкою
+        self.history_time = [0.0]
 
+        # 2. Рахуємо вуличну температуру для часу 0 і записуємо її
+        initial_outdoor = self._get_current_outdoor_temp()
+        self.history_outdoor = [initial_outdoor]
+
+        # 3. Ініціалізуємо кімнати (вже було правильно, але для контексту)
         for room_id in self.building.rooms:
             self.current_temperatures[room_id] = start_temp
             self.history_temps[room_id] = [start_temp]
-            self.total_energy_kwh[room_id] = 0.0  # Скидаємо лічильник
+
+    # def initialize(self, start_temp: float, profiles: Dict[str, RoomControlProfile],
+    #                t_min: float, t_max: float, internal_gain: float = 200.0):
+    #
+    #     self.current_time_sec = 0.0
+    #     self.t_min_outdoor = t_min
+    #     self.t_max_outdoor = t_max
+    #     self.internal_heat_gain = internal_gain
+    #     self.control_profiles = profiles
+    #
+    #     self.history_time = []
+    #     self.history_outdoor = []
+    #
+    #     for room_id in self.building.rooms:
+    #         self.current_temperatures[room_id] = start_temp
+    #         self.history_temps[room_id] = [start_temp]
+    #         self.total_energy_kwh[room_id] = 0.0  # Скидаємо лічильник
 
     # =========================================================================
     # 1. ОБРАХУНОК ФІЗИЧНИХ ПАРАМЕТРІВ КІМНАТИ

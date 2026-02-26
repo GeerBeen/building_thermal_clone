@@ -31,7 +31,7 @@ with st.sidebar:
             "Матеріали",
             "Вікна та двері",
             "Симуляція",
-            "Збереження та експорт",
+            "Імпорт та Експорт",
             "Довідка"
         ],
         key="navigation_radio",
@@ -40,6 +40,8 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("Курсова робота 2025")
+    st.caption("ТВ-32 Михайленко Роман")
+
 
 page = st.session_state.navigation_radio
 
@@ -54,7 +56,7 @@ match page:
         make_openings()
     case "Симуляція":
         make_simulation()
-    case "Збереження та експорт":
+    case "Імпорт та Експорт":
         render_save_load_controls()
     case "Довідка":
         make_help()

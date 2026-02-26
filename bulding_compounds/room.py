@@ -7,15 +7,30 @@ from bulding_compounds.hvac import HVACDevice
 @dataclass
 class Room:
     name: str
-    width: float  # розмір по осі X
-    length: float  # розмір по осі Y
-    height: float
+    width: float  # розмір по осі X (м)
+    length: float  # розмір по осі Y (м)
+    height: float  # висота стелі (м)
     # Координати лівого нижнього кута
     x: float
     y: float
+    # За замовчуванням 4 стіни (прямокутна кімната)
     wall_ids: List[str] = field(default_factory=lambda: ["", "", "", ""])
-    hvac_devices: List[HVACDevice] = field(default_factory=list)
+    hvac_devices: List['HVACDevice'] = field(default_factory=list)
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+
+    def __post_init__(self):
+        """Валідація геометрії кімнати."""
+        if not self.name:
+            raise ValueError("Room name cannot be empty")
+
+        if self.width <= 0:
+            raise ValueError(f"Room width must be > 0. Got: {self.width}")
+
+        if self.length <= 0:
+            raise ValueError(f"Room length must be > 0. Got: {self.length}")
+
+        if self.height <= 0:
+            raise ValueError(f"Room height must be > 0. Got: {self.height}")
 
     def get_center(self, building) -> tuple[float, float]:
         """Центр кімнати — з координат стін (надійний спосіб)"""

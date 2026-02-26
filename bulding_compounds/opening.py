@@ -12,26 +12,43 @@ class OpeningCategory(StrEnum):
 @dataclass
 class OpeningTech:
     """
-    Технологія виготовлення отвору (Каталог).
-    Визначає фізику (тепло).
+    Технологія виготовлення отвору.
     """
-    name: str
-    U: float  # Вт/(м²·К) - Коефіцієнт теплопередачі
-    g: float  # 0.0 - 1.0 - Сонячний фактор
-    category: OpeningCategory
-    color: str = "#A0C4FF"  # Колір для відображення
+    name: str = "Default Tech"
+    U: float = 1  # Вт/(м²·К)
+    g: float = 1  # 0.0 - 1.0
+    category: OpeningCategory = OpeningCategory.WINDOW
+    color: str = "#A0C4FF"
+
+    def __post_init__(self):
+        if self.U < 0:
+            raise ValueError(f"U-value cannot be negative. Got: {self.U}")
+        if not (0.0 <= self.g <= 1.0):
+            raise ValueError(f"Solar factor (g) must be between 0 and 1. Got: {self.g}")
+        if not self.name:
+            raise ValueError("Name cannot be empty")
 
 
 @dataclass
 class Opening:
     """
-    Конкретний екземпляр отвору на стіні.
-    Визначає геометрію (розміри).
+    Конкретний екземпляр отвору.
     """
-    tech: OpeningTech  # Посилання на тип
-    width: float  # Ширина (м)
-    height: float  # Висота (м)
+    tech: OpeningTech
+    width: float = 1.0
+    height: float = 1.0
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+
+    def __post_init__(self):
+        # Валідація розмірів
+        if self.width <= 0:
+            raise ValueError(f"Width must be greater than 0. Got: {self.width}")
+        if self.height <= 0:
+            raise ValueError(f"Height must be greater than 0. Got: {self.height}")
+
+        # Валідація типу технології (щоб не передали випадково Enum замість об'єкта)
+        if not isinstance(self.tech, OpeningTech):
+            raise TypeError(f"tech must be an instance of OpeningTech, got {type(self.tech)}")
 
     @property
     def area(self) -> float:

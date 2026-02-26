@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 from simulation.controls import RoomControlProfile, ControlMode
-from simulation.thermal_simulation import ThermalSimulation
+from simulation.thermal_sim import ThermalSimulation
 import json
 
-# Припускаємо наявність класів Building, RoomControlProfile, ControlMode, ThermalSimulation
 
 def make_simulation():
     """
@@ -25,13 +24,9 @@ def make_simulation():
     st.divider()
 
     # 2. Запуск
-    if st.button("ЗАПУСТИТИ", type="primary", width='stretch'):
+    if st.button("ЗАПУСТИТИ", type="primary", width='stretch', key="sim_run_btn"):
         _run_simulation_process(building, params, profiles)
 
-
-# ==============================================================================
-# 1. UI: НАЛАШТУВАННЯ (View Components)
-# ==============================================================================
 
 def _render_simulation_params():
     """Відображає віджети для глобальних налаштувань (погода, тариф, час)."""
@@ -41,21 +36,25 @@ def _render_simulation_params():
         with c1:
             t_min, t_max = st.slider(
                 "Температура вулиці (Ніч / День)",
-                min_value=-30.0, max_value=40.0, value=(-5.0, 2.0), step=1.0
+                min_value=-30.0, max_value=40.0, value=(-5.0, 2.0), step=1.0,
+                key="sim_outdoor_temp"
             )
         with c2:
-            tariff = st.number_input("Тариф (грн/кВт·год)", value=4.32, step=0.1)
+            tariff = st.number_input("Тариф (грн/кВт·год)", min_value=0., value=4.32, step=0.1, key="sim_tariff")
         with c3:
             internal_gain = st.number_input(
-                "Побутове тепло (Вт/кімнату)",
-                value=200.0, help="Люди, техніка, освітлення"
+                "Побутове тепло (Вт/кімнату)", min_value=0,
+                value=0, help="Люди, техніка, освітлення",
+                key="sim_internal_gain"
             )
 
     c_dur, c_start = st.columns(2)
     with c_dur:
-        duration = st.number_input("Тривалість (годин)", value=24, min_value=1)
+        # Key: sim_duration
+        duration = st.number_input("Тривалість (годин)", value=24, min_value=1, max_value=3000, key="sim_duration")
     with c_start:
-        start_t = st.number_input("Початкова температура в домі", value=19.0)
+        # Key: sim_start_temp
+        start_t = st.number_input("Початкова температура в домі", min_value=-100., max_value=100., value=19.0, key="sim_start_temp")
 
     return {
         "t_min": t_min, "t_max": t_max, "tariff": tariff,
@@ -114,10 +113,6 @@ def _get_profile_for_room(room, room_id):
     return profile
 
 
-# ==============================================================================
-# 2. LOGIC: ЗАПУСК ПРОЦЕСУ (Controller)
-# ==============================================================================
-
 def _run_simulation_process(building, params, profiles):
     """Виконує симуляцію, оновлює прогрес і викликає рендер результатів."""
 
@@ -134,42 +129,28 @@ def _run_simulation_process(building, params, profiles):
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    # === ВИПРАВЛЕНА ЛОГІКА ЦИКЛУ ===
-    # Ми хочемо симулювати загалом `duration` годин.
-    # Розіб'ємо цей час на 10 кроків для анімації прогресу.
-    # Кожен крок симулює duration / 10 годин.
-
     total_hours = params["duration"]
     chunk_hours = total_hours / 10.0
 
     for i in range(10):
-        # 1. Рахуємо шматок фізики
         status_text.text(f"Обрахунок... {int((i + 1) * 10)}%")
 
-        # УВАГА: run_simulation просто додає нові дані до існуючих (append),
-        # тому ми викликаємо його 10 разів з меншим часом.
         sim.run_simulation(duration_hours=chunk_hours, dt_seconds=60)
 
-        # 2. Оновлюємо бар
         progress_bar.progress((i + 1) * 10)
 
     status_text.text("Симуляцію завершено успішно!")
 
-    # === ВІДОБРАЖЕННЯ РЕЗУЛЬТАТІВ (Тільки один раз в кінці) ===
     _render_results(sim, building, params["tariff"])
 
-
-# ==============================================================================
-# 3. UI: РЕЗУЛЬТАТИ (Results View)
-# ==============================================================================
 
 def _render_results(sim, building, tariff):
     """Малює графіки та таблиці."""
 
-    # 1. Графік температур
+    #  Графік температур
     st.plotly_chart(sim.get_results_chart(), width='stretch')
 
-    # 2. Економічний звіт
+    #  Економічний звіт
     st.subheader("Енерговитрати та Вартість")
 
     total_kwh_all = sum(sim.total_energy_kwh.values())
@@ -189,7 +170,7 @@ def _render_results(sim, building, tariff):
 def _render_energy_table(sim, building, tariff, total_kwh_all):
     """Малює детальну таблицю по кімнатах та дозволяє скачати результати."""
 
-    # 1. Формуємо зведені дані (для таблиці)
+    #  Формуємо зведені дані
     report_data = []
 
     for rid, kwh in sim.total_energy_kwh.items():
@@ -229,17 +210,12 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
         }
     )
 
-    # =========================================================
-    # 2. БЛОК ЕКСПОРТУ (CSV, JSON)
-    # =========================================================
     st.divider()
     st.subheader("Експорт результатів")
 
     with st.container(border=True):
         st.caption("Оберіть формат для завантаження даних:")
 
-        # А. Готуємо Детальний DataFrame (Часовий ряд)
-        # Створюємо словник: Час -> Вулиця -> Кімната 1 -> Кімната 2...
         time_series_data = {
             "Час (годин)": sim.history_time,
             "Вулиця (°C)": sim.history_outdoor
@@ -250,11 +226,9 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
 
         df_detailed = pd.DataFrame(time_series_data)
 
-        # Б. Кнопки завантаження
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            # 1. CSV: Зведений звіт (Те, що в таблиці)
             st.download_button(
                 label="Звіт (CSV)",
                 data=df_summary.to_csv(index=False).encode('utf-8'),
@@ -264,7 +238,6 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
             )
 
         with col2:
-            # 2. CSV: Детальна динаміка (Для Excel)
             st.download_button(
                 label="Динаміка (CSV)",
                 data=df_detailed.to_csv(index=False).encode('utf-8'),
@@ -274,7 +247,6 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
             )
 
         with col3:
-            # 3. JSON: Повний дамп (Звіт + Динаміка)
             full_json_data = {
                 "summary": report_data,
                 "dynamics": time_series_data,
@@ -284,7 +256,6 @@ def _render_energy_table(sim, building, tariff, total_kwh_all):
                     "tariff": tariff
                 }
             }
-            # Конвертуємо в JSON рядок
             json_str = json.dumps(full_json_data, indent=2, ensure_ascii=False)
 
             st.download_button(

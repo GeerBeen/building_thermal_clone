@@ -3,12 +3,8 @@ import json
 from building_serializer import BuildingSerializer
 
 
-# === CALLBACK ФУНКЦІЯ ===
-# Вона виконається натисканням кнопки, АЛЕ ПЕРЕД перезавантаженням сторінки
 def apply_load_callback(new_building_obj):
-    # 1. Оновлюємо будівлю
     st.session_state.building = new_building_obj
-    # 2. Змінюємо навігацію
     st.session_state.navigation_radio = "Планування"
 
 
@@ -17,7 +13,6 @@ def render_save_load_controls():
 
     col_save, col_load = st.columns(2)
 
-    # --- СЕКЦІЯ ЗБЕРЕЖЕННЯ ---
     with col_save:
         with st.container(border=True):
             st.subheader(" Експорт")
@@ -39,7 +34,6 @@ def render_save_load_controls():
             else:
                 st.warning("Проєкт порожній.")
 
-    # --- СЕКЦІЯ ЗАВАНТАЖЕННЯ ---
     with col_load:
         with st.container(border=True):
             st.subheader("Імпорт")
@@ -54,9 +48,6 @@ def render_save_load_controls():
                     st.markdown(f"**Знайдено:** {len(loaded_building.rooms)} кімнат.")
                     st.divider()
 
-                    # === ВИПРАВЛЕНА КНОПКА ===
-                    # Ми не пишемо логіку в if st.button(...):
-                    # Ми передаємо функцію в on_click=...
                     st.button(
                         "Відкрити цей проєкт",
                         type="primary",

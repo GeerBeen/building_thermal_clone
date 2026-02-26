@@ -5,19 +5,50 @@ from typing import List
 
 
 class HVACType(StrEnum):
-    HEATER = "Обігрівач"  # Додає тепло
-    COOLER = "Кондиціонер"  # Забирає тепло (охолодження)
-    AC_INVERTER = "Клімат-контроль"  # Може і гріти, і охолоджувати
+    HEATER = "Обігрівач"
+    COOLER = "Кондиціонер"
+    AC_INVERTER = "Клімат-контроль"
 
 
 @dataclass
 class HVACDevice:
     name: str
     device_type: HVACType
-    power_heating: float = 0.0  # Вт (Максимальна потужність нагріву)
-    power_cooling: float = 0.0  # Вт (Максимальна потужність охолодження)
-    efficiency: float = 1.0  # COP/ККД (для розрахунку витрат електрики, поки можна 1.0)
+    power_heating: float = 0.0  # Вт
+    power_cooling: float = 0.0  # Вт
+    efficiency: float = 1.0  # COP/ККД
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+
+    def __post_init__(self):
+        # 1. Базові перевірки значень
+        if not self.name:
+            raise ValueError("Device name cannot be empty")
+
+        if self.power_heating < 0:
+            raise ValueError(f"Heating power cannot be negative. Got: {self.power_heating}")
+
+        if self.power_cooling < 0:
+            raise ValueError(f"Cooling power cannot be negative. Got: {self.power_cooling}")
+
+        if self.efficiency <= 0:
+            raise ValueError(f"Efficiency must be greater than 0. Got: {self.efficiency}")
+
+        # 2. Логічні перевірки відповідності Типу та Потужності
+        if self.device_type == HVACType.HEATER:
+            if self.power_heating == 0:
+                raise ValueError("A Heater must have heating_power > 0")
+            if self.power_cooling > 0:
+                raise ValueError("A Heater cannot have cooling_power")
+
+        elif self.device_type == HVACType.COOLER:
+            if self.power_cooling == 0:
+                raise ValueError("A Cooler must have cooling_power > 0")
+            if self.power_heating > 0:
+                raise ValueError("A Cooler cannot have heating_power")
+
+        elif self.device_type == HVACType.AC_INVERTER:
+            if self.power_heating == 0 and self.power_cooling == 0:
+                raise ValueError("AC Inverter must have either heating or cooling power (or both)")
 
     @property
     def description(self) -> str:

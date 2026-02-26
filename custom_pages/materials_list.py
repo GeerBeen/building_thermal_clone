@@ -10,7 +10,6 @@ def make_materials():
     База даних будівельних матеріалів з розрахованими теплофізичними характеристиками.
     """)
 
-    # 1. ПІДГОТОВКА ДАНИХ (Data Preparation)
     # Перетворюємо словник об'єктів у список словників для DataFrame
     data = []
 
@@ -41,7 +40,6 @@ def make_materials():
     min_u, max_u = df_original["U-значення"].min(), df_original["U-значення"].max()
     min_rho, max_rho = df_original["Щільність"].min(), df_original["Щільність"].max()
 
-    # 2. ПАНЕЛЬ ФІЛЬТРІВ (Filters UI)
     with st.expander("Фільтри та налаштування пошуку", expanded=True):
         col1, col2, col3 = st.columns(3)
 
@@ -87,7 +85,6 @@ def make_materials():
         with col_reset:
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # --- ФУНКЦІЯ СКИДАННЯ (Callback) ---
             def reset_filters_callback():
                 # Змінюємо стан ПЕРЕД перезавантаженням
                 st.session_state.filter_u = (float(min_u), float(max_u))
@@ -95,19 +92,18 @@ def make_materials():
                 st.session_state.filter_levels = []
                 st.session_state.filter_search = ""
 
-            # Кнопка тепер просто викликає функцію, а не містить логіку всередині if
             st.button("Скинути фільтри", on_click=reset_filters_callback, width='stretch')
 
-    # 3. ЛОГІКА ФІЛЬТРАЦІЇ (Filtering Logic)
+
     df = df_original.copy()
 
-    # Фільтр U (діапазон)
+    # Фільтр U
     df = df[(df["U-значення"] >= filter_u_range[0]) & (df["U-значення"] <= filter_u_range[1])]
 
-    # Фільтр Щільності (діапазон)
+    # Фільтр Щільності
     df = df[(df["Щільність"] >= filter_density_range[0]) & (df["Щільність"] <= filter_density_range[1])]
 
-    # Фільтр Рівня (якщо щось обрано)
+    # Фільтр Рівняч
     if filter_levels:
         df = df[df["Рівень"].isin(filter_levels)]
 
@@ -115,7 +111,6 @@ def make_materials():
     if filter_search.strip():
         df = df[df["Назва"].str.lower().str.contains(filter_search.lower())]
 
-    # 4. ВІДОБРАЖЕННЯ ТАБЛИЦІ (Table Display)
     st.markdown(f"#### Знайдено матеріалів: **{len(df)}**")
 
     if df.empty:
@@ -145,7 +140,6 @@ def make_materials():
             }
         )
 
-        # 5. СЕКЦІЯ КОЛЬОРІВ (Color Preview)
         st.markdown("---")
         st.markdown("### Палітра матеріалів")
 
@@ -180,7 +174,7 @@ def make_materials():
                 col_idx = idx % cols_per_row
                 with cols[col_idx]:
                     with st.container(border=True):
-                        # Відображення кольору через color_picker (найчистіший UI варіант)
+                        # Відображення кольору через color_picker
                         st.color_picker(
                             label=f"Color_{row['ID']}",  # Унікальний ключ
                             value=row["Колір"],
@@ -196,90 +190,5 @@ def make_materials():
                         st.caption(f"U: **{row['U-значення']:.2f}**")
                         if color_mode == "Всі відфільтровані":
                             pass
-                            # st.caption(f"d: {row['Товщина (мм)']}мм")
         else:
             st.write("Немає даних для відображення кольорів.")
-
-# def make_materials():
-#     st.subheader("Бібліотека матеріалів та конструкцій стін")
-#     st.markdown("""
-#     Тут представлені найпоширеніші стінові конструкції, що відповідають
-#     **ДБН В.2.6-31:2016 «Теплова ізоляція будівель»** та реальним проєктам 2024–2025 рр.
-#     """)
-#
-#     # Перетворюємо словник у DataFrame
-#     data = []
-#     for material in MATERIALS.values():
-#         data.append({
-#             "Назва конструкції": material.name,
-#             "U-значення, Вт/(м²·К)": round(material.U, 3),
-#             "Щільність, кг/м³": int(material.density),
-#             "Питома теплоємність, Дж/(кг·К)": int(material.specific_heat),
-#             "Колір (HEX)": material.color,  # Просто HEX як текст
-#             "Рівень теплоізоляції":
-#                 "Пасивний дім" if material.U <= 0.15 else
-#                 "Енергоефективний" if material.U <= 0.25 else
-#                 "Сучасний" if material.U <= 0.50 else
-#                 "Стандартний" if material.U <= 1.0 else
-#                 "Без утеплення"
-#         })
-#
-#     df = pd.DataFrame(data)
-#
-#     # Гарна інтерактивна таблиця з виправленим column_config
-#     st.dataframe(
-#         df[["Назва конструкції", "U-значення, Вт/(м²·К)", "Рівень теплоізоляції",
-#             "Щільність, кг/м³", "Питома теплоємність, Дж/(кг·К)", "Колір (HEX)"]],
-#         use_container_width=True,
-#         hide_index=True,
-#         column_config={
-#             "Колір (HEX)": st.column_config.Column("Колір", width="medium"),  # Виправлено: Column замість HtmlColumn
-#             "U-значення, Вт/(м²·К)": st.column_config.NumberColumn(format="%.3f"),
-#             "Рівень теплоізоляції": st.column_config.SelectboxColumn("Рівень", options=list(df["Рівень теплоізоляції"].unique()))
-#         }
-#     )
-#
-#     # Візуалізація кольорів нижче таблиці (як картки)
-#     st.markdown("### Попередній перегляд кольорів")
-#     cols = st.columns(3)
-#     for idx, material in enumerate(list(MATERIALS.values())[:9]):  # Перші 9 для прикладу
-#         with cols[idx % 3]:
-#             with st.container(border=True):
-#                 st.markdown(f"""
-#                 <div style="background:{material.color}; height:20px; border-radius:4px; border:1px solid #ccc;"></div>
-#                 """, unsafe_allow_html=True)
-#                 st.caption(f"**{material.name}** — U={material.U:.3f}")
-#
-#     # Фільтри (як раніше)
-#     st.markdown("---")
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         max_u = st.slider("Максимальне U-значення", 0.1, 3.5, 1.0, 0.05)
-#     with col2:
-#         level = st.multiselect("Рівень теплоізоляції",
-#             ["Пасивний дім", "Енергоефективний", "Сучасний", "Стандартний", "Без утеплення"],
-#             default=["Енергоефективний", "Пасивний дім"])
-#
-#     filtered = df[df["U-значення, Вт/(м²·К)"] <= max_u]
-#     if level:
-#         filtered = filtered[filtered["Рівень теплоізоляції"].isin(level)]
-#
-#     if len(filtered) < len(df):
-#         st.success(f"Знайдено {len(filtered)} відповідних конструкцій")
-#         st.dataframe(filtered, use_container_width=True, hide_index=True)
-
-# # materials.py — альтернатива
-# def make_materials():
-#     st.subheader("Конструкції стін")
-#
-#     cols = st.columns(3)
-#     for idx, material in enumerate(MATERIALS.values()):
-#         with cols[idx % 3]:
-#             u_level = "Пасивний" if material.U <= 0.15 else "Енергоефективний" if material.U <= 0.25 else "Звичайний"
-#             with st.container(border=True):
-#                 st.markdown(f"""
-#                 <div style="background:{material.color};height:12px;border-radius:4px;"></div>
-#                 """, unsafe_allow_html=True)
-#                 st.markdown(f"**{material.name}**")
-#                 st.caption(f"U = {material.U:.3f} Вт/(м²·К) ← {u_level}")
-#                 st.caption(f"ρ = {material.density:.0f} кг/м³  •  c = {material.specific_heat:.0f} Дж/(кг·К)")

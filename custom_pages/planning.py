@@ -23,10 +23,6 @@ def make_planning():
         _render_initial_setup(building)
 
 
-# ==============================================================================
-# ДОПОМІЖНІ ФУНКЦІЇ (PRIVATE FUNCTIONS)
-# ==============================================================================
-
 def _ensure_state():
     """Ініціалізація стану, якщо він відсутній"""
     if "building" not in st.session_state:
@@ -44,30 +40,30 @@ def _render_initial_setup(building):
     with st.form("create_initial_room_form"):
         c1, c2 = st.columns(2)
         with c1:
-            room_name = st.text_input("Назва кімнати", value="Вітальня")
+            room_name = st.text_input("Назва кімнати", value="Вітальня", key="plan_room_name")
 
-            # Використовуємо глобальний словник MATERIALS (або WALL_MATERIALS)
-            # Переконайтесь, що він доступний у цьому скоупі
             material_options = list(MATERIALS.keys())
 
             def format_func(key):
                 mat = MATERIALS[key]
                 return f"{mat.name} (U={mat.U})"
 
+            # ДОДАНО key="plan_room_mat"
             selected_mat_key = st.selectbox(
                 "Матеріал зовнішніх стін",
                 options=material_options,
-                format_func=format_func
+                format_func=format_func,
+                key="plan_room_mat"
             )
 
         with c2:
-            width = st.number_input("Ширина (X), м", min_value=1.0, value=5.0, step=0.1)
-            length = st.number_input("Довжина (Y), м", min_value=1.0, value=4.0, step=0.1)
-            height = st.number_input("Висота стелі (H), м", min_value=2.0, value=2.8, step=0.1)
+            # ДОДАНО КЛЮЧІ ДЛЯ РОЗМІРІВ
+            width = st.number_input("Ширина (X), м", min_value=1.0, value=5.0, step=0.1, key="plan_room_width")
+            length = st.number_input("Довжина (Y), м", min_value=1.0, value=4.0, step=0.1, key="plan_room_length")
+            height = st.number_input("Висота стелі (H), м", min_value=2.0, value=2.8, step=0.1, key="plan_room_height")
 
-        st.caption(f"Площа: {width * length:.2f} м² | Об'єм: {width * length * height:.2f} м³")
-
-        if st.form_submit_button("Створити фундамент та першу кімнату"):
+        # ДОДАНО key="plan_create_submit"
+        if st.form_submit_button("Створити фундамент та першу кімнату", key="plan_create_submit"):
             try:
                 chosen_material = MATERIALS[selected_mat_key]
                 new_room = building.create_initial_room(
@@ -214,7 +210,6 @@ def _render_room_details(building, room):
                 st.success("Пристрій встановлено!")
                 st.rerun()
 
-    # === БЛОК ВИДАЛЕННЯ ===
     st.divider()
 
     if st.button("Видалити цю кімнату", key=f"del_btn_{room.id}", type="primary", width='stretch'):
@@ -282,10 +277,10 @@ def _render_wall_card(building, room, item, dir_icons):
                 key=f"color_{w.id}"
             )
 
-        # 2. Блок "Додати отвір" (Доступний для ВСІХ стін)
+        #  Блок "Додати отвір" (Доступний для ВСІХ стін)
         with st.expander(" Додати отвір (Вікно/Двері)", expanded=False):
             with st.form(key=f"add_opening_form_{w.id}"):
-                # А. Вибір типу (Selectbox)
+                #  Вибір типу (Selectbox)
                 tech_keys = list(OPENING_TYPES.keys())
 
                 def format_tech(key):
@@ -299,7 +294,7 @@ def _render_wall_card(building, room, item, dir_icons):
                     format_func=format_tech
                 )
 
-                # Б. Розміри (Columns)
+                #  Розміри (Columns)
                 c_w, c_h = st.columns(2)
                 with c_w:
                     op_width = st.number_input("Ширина, м", min_value=0.5, value=0.9, step=0.1)
@@ -310,30 +305,25 @@ def _render_wall_card(building, room, item, dir_icons):
 
                 if submitted_op:
                     try:
-                        # 1. Отримуємо технологію з каталогу
                         tech = OPENING_TYPES[selected_tech_key]
 
-                        # 2. Створюємо об'єкт Opening
-                        # (Клас Opening має бути імпортований)
                         new_opening = Opening(
                             tech=tech,
                             width=op_width,
                             height=op_height
                         )
 
-                        # 3. Додаємо до стіни (метод сам перевірить валідацію розмірів)
                         w.add_opening(new_opening)
 
                         st.success(f"{tech.category} додано!")
                         st.rerun()
 
                     except ValueError as e:
-                        # Ловимо помилки валідації (не влізло в стіну)
                         st.error(f"{e}")
                     except Exception as e:
                         st.error(f"Помилка: {e}")
 
-        # 3. Блок "Прибудувати кімнату" (Тільки для ЗОВНІШНІХ стін)
+        #  Блок "Прибудувати кімнату"x
         if is_ext:
             with st.expander("Прибудувати кімнату", expanded=False):
                 with st.form(key=f"add_room_form_{w.id}"):
@@ -367,17 +357,12 @@ def _render_wall_card(building, room, item, dir_icons):
 
         with st.expander(" Змінити матеріал", expanded=False):
             with st.form(key=f"change_mat_form_{w.id}"):
-                # Отримуємо список доступних матеріалів
-                # (WALL_MATERIALS має бути доступним у цьому контексті)
                 mat_keys = list(MATERIALS.keys())
 
                 def format_mat(key):
                     m = MATERIALS[key]
-                    # Показуємо назву і U, щоб користувач розумів, на що міняє
                     return f"{m.name} (U={m.U})"
 
-                # Спробуємо знайти поточний матеріал у списку, щоб зробити його дефолтним
-                # Порівнюємо за назвою, бо об'єкти можуть бути різними інстансами
                 current_index = 0
                 for idx, k in enumerate(mat_keys):
                     if MATERIALS[k].name == w.base_material.name:

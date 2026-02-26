@@ -9,13 +9,29 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Material:
-    name: str
-    thickness: float  # Товщина стіни (метри)
-    conductivity: float  # Теплопровідність λ (Вт/(м·К))
-    density: float  # Щільність ρ (кг/м³)
-    specific_heat: float  # Питома теплоємність c (Дж/(кг·К))
+    name: str = "Default material"
+    thickness: float = 1.0  # м
+    conductivity: float = 1.0  # Вт/(м·К)
+    density: float = 1.0  # кг/м³
+    specific_heat: float = 1.0  # Дж/(кг·К)
     color: str = "#888888"
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+
+    def __post_init__(self):
+        """Перевірка фізичних параметрів на адекватність."""
+        if not self.name:
+            raise ValueError("Material name cannot be empty")
+        # Товщина не може бути 0 або менше
+        if self.thickness <= 0:
+            raise ValueError(f"Thickness must be > 0. Got: {self.thickness}")
+        # Теплопровідність має бути додатною
+        if self.conductivity <= 0:
+            raise ValueError(f"Conductivity must be > 0. Got: {self.conductivity}")
+        # Щільність та теплоємність для розрахунку інерції
+        if self.density <= 0:
+            raise ValueError(f"Density must be > 0. Got: {self.density}")
+        if self.specific_heat <= 0:
+            raise ValueError(f"Specific heat must be > 0. Got: {self.specific_heat}")
 
     @property
     def U(self) -> float:
@@ -23,9 +39,8 @@ class Material:
         Розрахунок коефіцієнта теплопередачі U (W/m²K).
         R = thickness / conductivity
         U = 1 / (R + 0.17)
-        0.17 - сумарний опір теплосприйняттю поверхонь (0.13 вн + 0.04 зовн)
         """
-        if self.conductivity <= 0: return 0
+        # Тут ділення на 0 вже неможливе завдяки post_init
         r_value = self.thickness / self.conductivity
         return round(1 / (r_value + 0.17), 3)
 
@@ -33,7 +48,6 @@ class Material:
     def thermal_mass(self) -> float:
         """
         Теплоємність 1 м² стіни (Дж/К).
-        Показує, скільки енергії треба, щоб нагріти квадратний метр стіни на 1 градус.
         """
         return self.density * self.thickness * self.specific_heat
 
@@ -303,16 +317,3 @@ MATERIALS = {
     )
 }
 
-# =========================================================================
-# ПРИКЛАД ПЕРЕВІРКИ
-# =========================================================================
-if __name__ == "__main__":
-    print(f"{'Матеріал':<45} | {'Товщ(м)':<8} | {'U-value':<8} | {'Маса 1м² (кг)'}")
-    print("-" * 85)
-
-    test_keys = ["Brick_Red_510", "Aeroc_D300_375", "Concrete_Reinforced_200", "SIP_Panel_170", "Straw_Bale_450"]
-
-    for key in test_keys:
-        mat = WALL_MATERIALS[key]
-        mass_per_m2 = mat.density * mat.thickness
-        print(f"{mat.name:<45} | {mat.thickness:<8.2f} | {mat.U:<8.2f} | {mass_per_m2:.1f}")

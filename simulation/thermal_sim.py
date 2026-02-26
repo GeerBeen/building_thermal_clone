@@ -11,74 +11,67 @@ WALL_MASS_FACTOR = 0.5  # Яка частина маси стіни бере у�
 
 
 class ThermalSimulation:
-    def __init__(self, building: Building):
+    def __init__(self, building):
         self.building = building
 
-        # === НОВІ НАЛАШТУВАННЯ ПОГОДИ ===
-        self.t_min_outdoor = -5.0  # Ніч
-        self.t_max_outdoor = 0.0  # День
-
-        # === НОВЕ: ЕКОНОМІКА ===
-        # {room_id: float} -> накопичені кВт*год
+        self.t_min_outdoor = -5.0
+        self.t_max_outdoor = 0.0
         self.total_energy_kwh: Dict[str, float] = {}
-
-        # === НОВЕ: ПОБУТОВЕ ТЕПЛО (Люди, техніка) ===
-        # Вт на кімнату (константа)
         self.internal_heat_gain = 200.0
 
         # Стан
         self.current_temperatures: Dict[str, float] = {}
-        self.control_profiles: Dict[str, RoomControlProfile] = {}
+        self.control_profiles: Dict[str, 'RoomControlProfile'] = {} # Типізація стрінгою
         self.current_time_sec = 0.0
 
-        # Історія
+        # Історія (ініціалізуємо порожніми списками для існуючих кімнат)
         self.history_temps: Dict[str, List[float]] = {rid: [] for rid in building.rooms}
-        self.history_outdoor: List[float] = []  # Зберігаємо історію вулиці
+        self.history_outdoor: List[float] = []
         self.history_time: List[float] = []
 
-    def initialize(self, start_temp: float, profiles: Dict[str, RoomControlProfile],
+    def initialize(self, start_temp: float, profiles: Dict[str, 'RoomControlProfile'],
                    t_min: float, t_max: float, internal_gain: float = 200.0):
 
+        # --- 1. ВАЛІДАЦІЯ ---
+        if t_min > t_max:
+            raise ValueError(f"t_min ({t_min}) cannot be greater than t_max ({t_max})")
+
+        if internal_gain < 0:
+            raise ValueError("Internal heat gain cannot be negative")
+
+        # Перевіряємо, чи всі кімнати мають профіль
+        building_room_ids = set(self.building.rooms.keys())
+        provided_profile_ids = set(profiles.keys())
+
+        # Якщо є кімнати без профілю -> помилка
+        missing_rooms = building_room_ids - provided_profile_ids
+        if missing_rooms:
+            raise ValueError(f"Missing control profiles for rooms: {missing_rooms}")
+
+        # --- 2. СКИДАННЯ СТАНУ ---
         self.current_time_sec = 0.0
         self.t_min_outdoor = t_min
         self.t_max_outdoor = t_max
         self.internal_heat_gain = internal_gain
         self.control_profiles = profiles
-        self.total_energy_kwh = {rid: 0.0 for rid in self.building.rooms}  # Скидаємо лічильник
 
-        # === ВИПРАВЛЕННЯ ТУТ ===
-        # 1. Ініціалізуємо час з нульовою точкою
+        # Обнуляємо лічильники енергії
+        self.total_energy_kwh = {rid: 0.0 for rid in self.building.rooms}
+
+        # Скидаємо історію (починаємо з чистого аркуша)
         self.history_time = [0.0]
 
-        # 2. Рахуємо вуличну температуру для часу 0 і записуємо її
+        # Температура вулиці на старті
         initial_outdoor = self._get_current_outdoor_temp()
         self.history_outdoor = [initial_outdoor]
 
-        # 3. Ініціалізуємо кімнати (вже було правильно, але для контексту)
+        # Ініціалізуємо температури кімнат
+        self.current_temperatures = {}
+        self.history_temps = {}
+
         for room_id in self.building.rooms:
             self.current_temperatures[room_id] = start_temp
             self.history_temps[room_id] = [start_temp]
-
-    # def initialize(self, start_temp: float, profiles: Dict[str, RoomControlProfile],
-    #                t_min: float, t_max: float, internal_gain: float = 200.0):
-    #
-    #     self.current_time_sec = 0.0
-    #     self.t_min_outdoor = t_min
-    #     self.t_max_outdoor = t_max
-    #     self.internal_heat_gain = internal_gain
-    #     self.control_profiles = profiles
-    #
-    #     self.history_time = []
-    #     self.history_outdoor = []
-    #
-    #     for room_id in self.building.rooms:
-    #         self.current_temperatures[room_id] = start_temp
-    #         self.history_temps[room_id] = [start_temp]
-    #         self.total_energy_kwh[room_id] = 0.0  # Скидаємо лічильник
-
-    # =========================================================================
-    # 1. ОБРАХУНОК ФІЗИЧНИХ ПАРАМЕТРІВ КІМНАТИ
-    # =========================================================================
 
     def _get_current_outdoor_temp(self) -> float:
         """
@@ -105,13 +98,13 @@ class ThermalSimulation:
         Рахує сумарну теплоємність (C) кімнати в Дж/К.
         C_total = C_air + C_walls_effective
         """
-        # 1. Теплоємність повітря
+        # Теплоємність повітря
         # V = Area * Height
         w, l = self.building.calculate_room_dimensions(room.id)
         volume = w * l * room.height
         c_air = volume * AIR_DENSITY * AIR_SPECIFIC_HEAT
 
-        # 2. Теплоємність стін (інерція)
+        # Теплоємність стін (інерція)
         c_walls = 0.0
         for wid in room.wall_ids:
             if wid in self.building.walls:
@@ -138,7 +131,7 @@ class ThermalSimulation:
             wall = self.building.walls[wid]
 
             # Визначаємо сусідню температуру
-            t_neighbor = outdoor_temp  # <--- Використовуємо динамічну вуличну
+            t_neighbor = outdoor_temp
 
             if len(wall.room_ids) == 2:
                 other_id = wall.room_ids[0] if wall.room_ids[1] == room.id else wall.room_ids[1]
@@ -156,13 +149,13 @@ class ThermalSimulation:
         """
         profile = self.control_profiles.get(room.id, RoomControlProfile())
 
-        # 1. Якщо режим "Завжди ВИКЛ" - повертаємо 0 одразу
+        # Якщо режим "Завжди ВИКЛ" - повертаємо 0 одразу
         if profile.mode == ControlMode.ALWAYS_OFF:
             return 0.0
 
         is_active = False
 
-        # 2. Логіка визначення активності (is_active)
+        # Логіка визначення активності (is_active)
         if profile.mode == ControlMode.ALWAYS_ON:
             is_active = True
 
@@ -187,12 +180,12 @@ class ThermalSimulation:
                 else:
                     is_active = False
 
-        # 3. Застосування активності до приладів
+        # Застосування активності до приладів
         total_power = 0.0
 
         if is_active:
             for device in room.hvac_devices:
-                # УВАГА: Для простоти поки вважаємо, що ControlMode керує "основним" режимом.
+                # Для простоти поки вважаємо, що ControlMode керує "основним" режимом.
                 # Якщо THERMOSTAT і холодно -> гріємо.
                 # Якщо THERMOSTAT і жарко -> студимо.
 
@@ -213,12 +206,8 @@ class ThermalSimulation:
 
         return total_power
 
-    # =========================================================================
-    # 2. ОСНОВНИЙ ЦИКЛ СИМУЛЯЦІЇ
-    # =========================================================================
-
     def step(self, dt_seconds: float):
-        # 1. Визначаємо погоду зараз
+        # Визначаємо погоду зараз
         current_outdoor = self._get_current_outdoor_temp()
         self.history_outdoor.append(current_outdoor)
 
@@ -231,7 +220,6 @@ class ThermalSimulation:
             q_transmission = self._calculate_transmission_heat_flow(room, current_t, current_outdoor)
             q_hvac = self._calculate_hvac_power(room, current_t)
 
-            # === ЛІЧИЛЬНИК ЕНЕРГІЇ ===
             # Power (W) * Time (h) / 1000 = kWh
             # Беремо модуль, бо охолодження теж витрачає електрику
             kwh_consumed = abs(q_hvac) * (dt_seconds / 3600.0) / 1000.0
@@ -259,17 +247,10 @@ class ThermalSimulation:
         for _ in range(steps):
             self.step(dt_seconds)
 
-    # =========================================================================
-    # 3. ВІЗУАЛІЗАЦІЯ
-    # =========================================================================
-
     def get_results_chart(self) -> go.Figure:
         fig = go.Figure()
 
-        # 1. Лінія вулиці (Тепер вона крива, бо погода змінюється)
         # Нам треба масив часу такої ж довжини, як і масив температур
-        # (У step ми додаємо в history_outdoor на кожному кроці, тож довжини співпадуть)
-
         fig.add_trace(go.Scatter(
             x=self.history_time,
             y=self.history_outdoor,
@@ -279,10 +260,9 @@ class ThermalSimulation:
             opacity=0.5
         ))
 
-        # 2. Кімнати
+        # Кімнати
         for room_id, temps in self.history_temps.items():
             room_name = self.building.rooms[room_id].name
-            # Можна додати колір залежно від того, холодна чи тепла кімната
             fig.add_trace(go.Scatter(
                 x=self.history_time,
                 y=temps,
@@ -291,7 +271,7 @@ class ThermalSimulation:
                 line=dict(width=3)
             ))
 
-        # 3. Зони комфорту (зелений фон 20-22 градуси)
+        #   Зони комфорту
         fig.add_hrect(
             y0=20.0, y1=22.0,
             fillcolor="green", opacity=0.1,

@@ -23,7 +23,7 @@ class BuildingSerializer:
         data = json.loads(json_str)
         new_building = Building()
 
-        # 1. Відновлюємо СТІНИ (Walls)
+        # Відновлюємо стіни
         # Нам треба пройтися по словнику data['walls']
         walls_data = data.get('walls', {})
 
@@ -32,7 +32,7 @@ class BuildingSerializer:
             mat_data = w_info['base_material']
             material = Material(**mat_data)
 
-            # Б. Відновлюємо Отвори (Openings)
+            #  Відновлюємо Отвори
             openings = []
             for op_data in w_info.get('openings', []):
                 # Відновлюємо OpeningTech
@@ -46,7 +46,7 @@ class BuildingSerializer:
                 op_params = {k: v for k, v in op_data.items() if k != 'tech'}
                 openings.append(Opening(tech=tech, **op_params))
 
-            # В. Створюємо Стіну
+            # Створюємо Стіну
             # Прибираємо вкладені структури, які ми вже відновили
             wall_params = {k: v for k, v in w_info.items()
                            if k not in ['base_material', 'openings']}
@@ -58,18 +58,18 @@ class BuildingSerializer:
             )
             new_building.walls[w_id] = wall
 
-        # 2. Відновлюємо КІМНАТИ (Rooms)
+        #  Відновлюємо кімнати
         rooms_data = data.get('rooms', {})
 
         for r_id, r_info in rooms_data.items():
-            # А. Відновлюємо HVAC
+            # Відновлюємо HVAC
             hvacs = []
             for h_data in r_info.get('hvac_devices', []):
                 # Конвертуємо тип назад в Enum
                 h_data['device_type'] = HVACType(h_data['device_type'])
                 hvacs.append(HVACDevice(**h_data))
 
-            # Б. Створюємо Кімнату
+            # Створюємо Кімнату
             room_params = {k: v for k, v in r_info.items() if k != 'hvac_devices'}
 
             room = Room(hvac_devices=hvacs, **room_params)

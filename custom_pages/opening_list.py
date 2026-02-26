@@ -13,16 +13,13 @@ def make_openings():
     * **g (Solar Factor)** — Коефіцієнт пропускання сонячної енергії (важливо для вікон).
     """)
 
-    # 1. ПІДГОТОВКА ДАНИХ
     data = []
-
-
 
     for key, tech in OPENING_TYPES.items():
         data.append({
             "ID": key,
             "Назва": tech.name,
-            "Категорія": tech.category.value,  # Отримуємо стрічку з Enum
+            "Категорія": tech.category.value,
             "U-значення": tech.U,
             "g-фактор": tech.g,
             "Колір": tech.color
@@ -33,12 +30,10 @@ def make_openings():
     # Визначаємо межі для слайдерів
     min_u, max_u = df_original["U-значення"].min(), df_original["U-значення"].max()
 
-    # 2. ПАНЕЛЬ ФІЛЬТРІВ
     with st.expander("Фільтри каталогу", expanded=True):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            # Фільтр категорій (Вікна / Двері)
             available_cats = sorted(df_original["Категорія"].unique())
             filter_cats = st.multiselect(
                 "Тип конструкції",
@@ -74,7 +69,6 @@ def make_openings():
 
         st.button("Скинути фільтри", on_click=reset_op_filters, key="btn_reset_op")
 
-    # 3. ЛОГІКА ФІЛЬТРАЦІЇ
     df = df_original.copy()
 
     # За категорією
@@ -88,7 +82,6 @@ def make_openings():
     if filter_search.strip():
         df = df[df["Назва"].str.lower().str.contains(filter_search.lower())]
 
-    # 4. ВІДОБРАЖЕННЯ ТАБЛИЦІ
     st.markdown(f"#### Знайдено позицій: **{len(df)}**")
 
     if not df.empty:
@@ -115,7 +108,6 @@ def make_openings():
             }
         )
 
-        # 5. ВІЗУАЛЬНІ КАРТКИ
         st.markdown("---")
         st.markdown("### Візуалізація")
 
